@@ -2,8 +2,13 @@
 #include "./deps/vec/vec.h"
 #include <math.h>
 #include <time.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
 
 const float G = 1.0;
+
+const int SCREEN_WIDTH = 800; 
+const int SCREEN_HEIGHT = 800;
 
 struct vec{
     float x;
@@ -71,39 +76,83 @@ int main(){
     body_vec_t bodies;
     vec_init(&bodies);
 
-    vec_push(&bodies, new_body(5.0, 5.0, 10.0, 10.0));
-    vec_push(&bodies, new_body(5.0, 25.0, 100.0, 100.0));
-    vec_push(&bodies, new_body(15.0, 125.0, 600.0, 600.0));
+    vec_push(&bodies, new_body(50.0, 800.0, 400.0, 400.0));
 
-    while(1){
-        for(int i = 0; i < bodies.length; i++){
-            float accel_x = 0.0;
-            float accel_y = 0.0;
+    struct Body satellite = new_body(5.0, 1.0, 750.0, 400.0);
+    struct vec new_vel;
+    new_vel.x = 0.0; new_vel.y = -1.5;
+    satellite.vel = new_vel;
 
-            struct Body current = bodies.data[i];
+    vec_push(&bodies, satellite);
 
-            printf("Body # %i -> x: %f, y: %f\n", i, current.pos.x, current.pos.y);
+    SDL_Window* window = NULL;
+    SDL_Surface* screenSurface = NULL;
+    SDL_Renderer* renderer = NULL;
 
-            for(int j = 0; j < bodies.length; j++){
-                struct Body other = bodies.data[j];
-                if(distance(current.pos, other.pos) >= current.radius + other.radius){
-                    struct vec accel = accel_vector(other.mass, current.pos, other.pos);
-                    accel_x += accel.x;
-                    accel_y += accel.y;
+    if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() ); 
+    else{
+        window = SDL_CreateWindow("SDL Window",
+                                    SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                                    SCREEN_WIDTH, SCREEN_HEIGHT,
+                                    SDL_WINDOW_SHOWN);
+        if (window == NULL){
+            printf("Error creating window: %s\n", SDL_GetError());
+        }else{
+            renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+
+            int count = 0;
+
+            while(count < 1000){
+
+                for(int i = 0; i < bodies.length; i++){
+                    float accel_x = 0.0;
+                    float accel_y = 0.0;
+
+                    struct Body current = bodies.data[i];
+
+                    for(int j = 0; j < bodies.length; j++){
+                        struct Body other = bodies.data[j];
+                        if(distance(current.pos, other.pos) >= current.radius + other.radius){
+                            struct vec accel = accel_vector(other.mass, current.pos, other.pos);
+                            accel_x += accel.x;
+                            accel_y += accel.y;
+                        }
+                    }
+
+                    bodies.data[i].vel.x += accel_x;
+                    bodies.data[i].vel.y += accel_y;
+
+                    bodies.data[i].pos.x += bodies.data[i].vel.x + (accel_x/2);
+                    bodies.data[i].pos.y += bodies.data[i].vel.y + (accel_y/2);
+
+                    filledCircleRGBA(renderer, current.pos.x, current.pos.y, current.radius, 255, 255, 255, 255);
                 }
+
+
+                SDL_RenderPresent(renderer);
+                SDL_UpdateWindowSurface(window);
+
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderClear(renderer);
+
+                struct timespec time;
+                struct timespec time2;
+                time.tv_sec = 0;
+                time.tv_nsec = 16666670;
+                nanosleep(&time, &time2);
+
+                /* SDL_Delay(16); */
+                count++;
             }
-
-            bodies.data[i].vel.x += accel_x;
-            bodies.data[i].vel.y += accel_y;
-
-            bodies.data[i].pos.x += bodies.data[i].vel.x + (accel_x/2);
-            bodies.data[i].pos.y += bodies.data[i].vel.y + (accel_y/2);
         }
-
-        struct timespec time;
-        struct timespec time2;
-        time.tv_sec = 0;
-        time.tv_nsec = 16666670;
-        nanosleep(&time, &time2);
     }
+
+
+
+    SDL_DestroyWindow(window);
+
+    SDL_Quit();
+
+    return 0;
 }
