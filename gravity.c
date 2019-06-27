@@ -90,6 +90,7 @@ int main(){
     SDL_Window* window = NULL;
     SDL_Renderer* renderer = NULL;
 
+
     if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
         printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() ); 
     else{
@@ -102,9 +103,17 @@ int main(){
         }else{//SDL initializes correctly
             renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-            int count = 0;
 
-            while(count < 1000){ //lazy method of ending the program
+            SDL_Event e;
+
+            while(1){
+
+                SDL_PollEvent(&e);
+                if(e.type == SDL_QUIT){
+                    SDL_DestroyWindow(window);
+                    SDL_Quit();
+                    return 0;
+                }
 
                 //for every body, iterate through every other body
                 for(int i = 0; i < bodies.length; i++){
@@ -148,8 +157,6 @@ int main(){
                 time.tv_sec = 0;
                 time.tv_nsec = 16666670;
                 nanosleep(&time, &time2);
-
-                count++;
             }
         }
     }
